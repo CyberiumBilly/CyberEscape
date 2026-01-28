@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 
-const MEDIA_SERVER_URL = import.meta.env.VITE_MEDIA_SERVER_URL || 'http://localhost:3002';
+const MEDIA_SERVER_URL = (import.meta as any).env?.VITE_MEDIA_SERVER_URL || 'http://localhost:3002';
 
 let socket: Socket | null = null;
 

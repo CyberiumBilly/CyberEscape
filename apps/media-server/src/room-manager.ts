@@ -143,7 +143,7 @@ export class RoomManager {
       }
     }
 
-    transport.on("dtlsstatechange", (dtlsState) => {
+    transport.on("dtlsstatechange", (dtlsState: string) => {
       if (dtlsState === "closed") {
         logger.info({ transportId: transport.id }, "Transport DTLS closed");
         transport.close();

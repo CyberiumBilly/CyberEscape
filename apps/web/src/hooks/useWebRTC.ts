@@ -1,6 +1,9 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Device } from 'mediasoup-client';
-import type { Transport, Producer, Consumer } from 'mediasoup-client/lib/types';
+
+type Transport = any;
+type Producer = any;
+type Consumer = any;
 import { useMediaSocket } from './useMediaSocket';
 
 interface Peer {
