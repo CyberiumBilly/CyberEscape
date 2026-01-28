@@ -128,9 +128,10 @@ export class RoomManager {
     const peer = room.peers.get(peerId);
     if (!peer) throw new Error("Peer not found: " + peerId);
 
-    const transport = await room.router.createWebRtcTransport(
-      config.webRtcTransportOptions
-    );
+    const transport = await room.router.createWebRtcTransport({
+      ...config.webRtcTransportOptions,
+      appData: { direction, peerId },
+    });
 
     if (config.webRtcTransportOptions.maxIncomingBitrate) {
       try {

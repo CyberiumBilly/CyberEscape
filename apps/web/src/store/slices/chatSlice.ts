@@ -24,8 +24,13 @@ const chatSlice = createSlice({
   name: 'chat',
   initialState,
   reducers: {
-    addMessage(state, action: PayloadAction<ChatMessage>) {
-      state.messages.push(action.payload);
+    addMessage(state, action: PayloadAction<ChatMessage & { text?: string }>) {
+      const msg = { ...action.payload };
+      if (!msg.content && msg.text) {
+        msg.content = msg.text;
+      }
+      delete (msg as any).text;
+      state.messages.push(msg);
       if (!state.isOpen) state.unreadCount += 1;
     },
     toggleChat(state) {

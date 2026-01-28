@@ -10,8 +10,9 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/api': { target: 'http://localhost:3001', changeOrigin: true },
-      '/socket.io': { target: 'http://localhost:3001', ws: true },
+      '/api': { target: 'http://localhost:3003', changeOrigin: true },
+      '/socket.io': { target: 'http://localhost:3003', ws: true },
+      '/media-socket': { target: 'http://localhost:3002', ws: true, rewrite: (p) => p.replace(/^\/media-socket/, '') },
     },
   },
 });

@@ -28,7 +28,7 @@ export default function TextChat({ teamId }: Props) {
 
   const send = () => {
     if (!text.trim()) return;
-    emit('chat:message', { teamId, content: text });
+    emit('chat:message', { roomId: teamId, text });
     setText('');
   };
 
