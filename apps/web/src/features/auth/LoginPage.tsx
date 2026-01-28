@@ -58,6 +58,10 @@ export default function LoginPage() {
             {t('auth.google')}
           </Button>
 
+          <Button variant="secondary" className="w-full" type="button" onClick={() => login({ email: 'tester@test.com', password: 'Test1234!' })}>
+            Continue as Tester
+          </Button>
+
           <p className="text-center text-sm text-cyber-muted">
             {t('auth.noAccount')} <Link to="/register" className="text-cyber-primary hover:underline">{t('auth.register')}</Link>
           </p>
