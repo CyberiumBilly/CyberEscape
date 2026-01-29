@@ -31,7 +31,7 @@ export const login = createAsyncThunk(
   'auth/login',
   async (credentials: { email: string; password: string }, { rejectWithValue }) => {
     try {
-      const res = await api.post('/api/v1/auth/login', credentials);
+      const res = await api.post('/api/auth/login', credentials);
       return res.data;
     } catch (err: any) {
       return rejectWithValue(err.response?.data?.message || 'Login failed');
@@ -43,7 +43,7 @@ export const register = createAsyncThunk(
   'auth/register',
   async (data: { name: string; email: string; password: string }, { rejectWithValue }) => {
     try {
-      const res = await api.post('/api/v1/auth/register', data);
+      const res = await api.post('/api/auth/register', data);
       return res.data;
     } catch (err: any) {
       return rejectWithValue(err.response?.data?.message || 'Registration failed');
@@ -56,7 +56,7 @@ export const refreshAccessToken = createAsyncThunk(
   async (_, { getState, rejectWithValue }) => {
     try {
       const state = getState() as { auth: AuthState };
-      const res = await api.post('/api/v1/auth/refresh', {
+      const res = await api.post('/api/auth/refresh', {
         refreshToken: state.auth.refreshToken,
       });
       return res.data;

@@ -27,7 +27,7 @@ async function request<T = any>(method: string, path: string, body?: any, config
   if (res.status === 401) {
     const refreshToken = localStorage.getItem('refreshToken');
     if (refreshToken) {
-      const refreshRes = await fetch('/api/v1/auth/refresh', {
+      const refreshRes = await fetch('/api/auth/refresh', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refreshToken }),

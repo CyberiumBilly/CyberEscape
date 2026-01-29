@@ -54,7 +54,7 @@ export default function LoginPage() {
             <div className="relative flex justify-center text-xs"><span className="bg-cyber-card px-2 text-cyber-muted">{t('auth.orContinueWith')}</span></div>
           </div>
 
-          <Button variant="secondary" className="w-full" type="button" onClick={() => { window.location.href = '/api/v1/auth/google'; }}>
+          <Button variant="secondary" className="w-full" type="button" onClick={() => { window.location.href = '/api/auth/google'; }}>
             {t('auth.google')}
           </Button>
 
