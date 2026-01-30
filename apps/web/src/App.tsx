@@ -9,6 +9,7 @@ const RegisterPage = lazy(() => import('./features/auth/RegisterPage'));
 const SSOCallback = lazy(() => import('./features/auth/SSOCallback'));
 const DashboardPage = lazy(() => import('./features/dashboard/DashboardPage'));
 const GameCanvas = lazy(() => import('./features/game/GameCanvas'));
+const GameCanvas3D = lazy(() => import('./features/game/GameCanvas3D'));
 const ResultsScreen = lazy(() => import('./features/game/components/ResultsScreen'));
 const TeamLobby = lazy(() => import('./features/multiplayer/components/TeamLobby'));
 const AchievementsPage = lazy(() => import('./features/gamification/AchievementsPage'));
@@ -59,6 +60,7 @@ export default function App() {
               <Route path="/" element={<DashboardPage />} />
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/rooms/:id" element={<GameCanvas />} />
+              <Route path="/rooms/:id/3d" element={<GameCanvas3D />} />
               <Route path="/rooms/:id/results" element={<ResultsScreen />} />
               <Route path="/team/lobby/:id" element={<TeamLobby />} />
               <Route path="/achievements" element={<AchievementsPage />} />

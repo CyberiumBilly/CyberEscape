@@ -85,6 +85,23 @@ const authSlice = createSlice({
       localStorage.setItem('accessToken', action.payload.accessToken);
       localStorage.setItem('refreshToken', action.payload.refreshToken);
     },
+    loginAsGuest(state) {
+      const guestToken = 'guest-demo-token-' + Date.now();
+      state.user = {
+        id: 'guest-user',
+        email: 'guest@demo.cyberescape.local',
+        name: 'Guest Tester',
+        role: 'user',
+        orgId: 'demo-org',
+      };
+      state.accessToken = guestToken;
+      state.refreshToken = guestToken;
+      state.isAuthenticated = true;
+      state.loading = false;
+      state.error = null;
+      localStorage.setItem('accessToken', guestToken);
+      localStorage.setItem('refreshToken', guestToken);
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -131,5 +148,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { logout, setTokens } = authSlice.actions;
+export const { logout, setTokens, loginAsGuest } = authSlice.actions;
 export default authSlice.reducer;

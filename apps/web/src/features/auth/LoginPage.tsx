@@ -18,7 +18,7 @@ type FormData = z.infer<typeof schema>;
 
 export default function LoginPage() {
   const { t } = useTranslation();
-  const { login, loading, error, isAuthenticated } = useAuth();
+  const { login, loginAsGuest, loading, error, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -58,7 +58,7 @@ export default function LoginPage() {
             {t('auth.google')}
           </Button>
 
-          <Button variant="secondary" className="w-full" type="button" onClick={() => login({ email: 'tester@test.com', password: 'Test1234!' })}>
+          <Button variant="secondary" className="w-full" type="button" onClick={() => loginAsGuest()}>
             Continue as Tester
           </Button>
 

@@ -50,6 +50,146 @@ function parsePuzzle(p: RawPuzzle) {
   };
 }
 
+// Demo room data for when API is unavailable
+const DEMO_ROOMS: Record<string, { name: string; type: string; timeLimit: number; puzzles: RawPuzzle[] }> = {
+  'password-auth': {
+    name: 'Password Authentication',
+    type: 'password-auth',
+    timeLimit: 600,
+    puzzles: [
+      {
+        id: 'pw-1',
+        type: 'PASSWORD_STRENGTH',
+        title: 'Create a Strong Password',
+        config: { minLength: 12, requireUpper: true, requireLower: true, requireNumber: true, requireSpecial: true },
+        hints: ['Use a mix of uppercase and lowercase letters', 'Include numbers and special characters like !@#$', 'Make it at least 12 characters long'],
+        basePoints: 100,
+      },
+    ],
+  },
+  'phishing': {
+    name: 'Phishing Detection',
+    type: 'phishing',
+    timeLimit: 600,
+    puzzles: [
+      {
+        id: 'ph-1',
+        type: 'PHISHING_INBOX',
+        title: 'Identify Phishing Emails',
+        config: {
+          emails: [
+            { id: 'e1', from: 'security@bankofamerica.com.fake-domain.net', subject: 'Urgent: Verify Your Account', body: 'Dear Customer,\n\nWe detected suspicious activity on your account. Click here immediately to verify your identity or your account will be suspended.\n\nClick: http://bit.ly/verify-now-123\n\nBank of America Security Team', isPhishing: true },
+            { id: 'e2', from: 'noreply@github.com', subject: 'Your repository was forked', body: 'Hey there!\n\nuser123 just forked your repository awesome-project.\n\nView the fork: https://github.com/user123/awesome-project\n\nHappy coding!\nThe GitHub Team', isPhishing: false },
+            { id: 'e3', from: 'support@paypa1.com', subject: 'Payment Received - Action Required', body: 'You received $500.00!\n\nTo claim your payment, log in now:\nhttp://paypa1-secure.com/claim\n\nThis link expires in 24 hours.\n\nPayPal', isPhishing: true },
+          ],
+        },
+        hints: ['Check the sender email domain carefully', 'Look for urgency tactics and suspicious links', 'Legitimate companies use their official domains'],
+        basePoints: 150,
+      },
+    ],
+  },
+  'network-security': {
+    name: 'Network Security',
+    type: 'network-security',
+    timeLimit: 600,
+    puzzles: [
+      {
+        id: 'ns-1',
+        type: 'MULTIPLE_CHOICE',
+        title: 'Firewall Configuration',
+        config: {
+          question: 'Which firewall rule should be applied to block incoming connections from unknown sources while allowing established outbound connections?',
+          options: [
+            { id: 'a', text: 'Allow all incoming, block all outgoing' },
+            { id: 'b', text: 'Block all incoming, allow all outgoing' },
+            { id: 'c', text: 'Default deny incoming, allow established/related outgoing' },
+            { id: 'd', text: 'Allow all traffic on all ports' },
+          ],
+          correctId: 'c',
+        },
+        hints: ['Think about the principle of least privilege', 'Outbound connections you initiate are usually safe', 'Default deny is a security best practice'],
+        basePoints: 100,
+      },
+    ],
+  },
+  'data-protection': {
+    name: 'Data Protection',
+    type: 'data-protection',
+    timeLimit: 600,
+    puzzles: [
+      {
+        id: 'dp-1',
+        type: 'DRAG_DROP',
+        title: 'Classify Sensitive Data',
+        config: {
+          instruction: 'Drag each data type to the correct classification level',
+          items: [
+            { id: 'i1', text: 'Employee Social Security Numbers' },
+            { id: 'i2', text: 'Company Holiday Schedule' },
+            { id: 'i3', text: 'Customer Credit Card Numbers' },
+            { id: 'i4', text: 'Public Press Releases' },
+          ],
+          categories: [
+            { id: 'public', name: 'Public', correctItems: ['i4'] },
+            { id: 'internal', name: 'Internal', correctItems: ['i2'] },
+            { id: 'confidential', name: 'Confidential', correctItems: ['i1', 'i3'] },
+          ],
+        },
+        hints: ['PII and financial data need the highest protection', 'Information freely shared externally is public', 'Internal data is for employees only'],
+        basePoints: 100,
+      },
+    ],
+  },
+  'insider-threat': {
+    name: 'Insider Threat',
+    type: 'insider-threat',
+    timeLimit: 600,
+    puzzles: [
+      {
+        id: 'it-1',
+        type: 'MULTIPLE_CHOICE',
+        title: 'Identify Suspicious Behavior',
+        config: {
+          question: 'An employee who recently gave their two-week notice has been accessing large amounts of proprietary data after hours. What should you do?',
+          options: [
+            { id: 'a', text: 'Ignore it - they are still employed' },
+            { id: 'b', text: 'Report to security team and restrict access immediately' },
+            { id: 'c', text: 'Confront the employee directly' },
+            { id: 'd', text: 'Wait until they leave to investigate' },
+          ],
+          correctId: 'b',
+        },
+        hints: ['Departing employees pose elevated risk', 'Security teams have proper investigation procedures', 'Acting quickly prevents data exfiltration'],
+        basePoints: 100,
+      },
+    ],
+  },
+  'incident-response': {
+    name: 'Incident Response',
+    type: 'incident-response',
+    timeLimit: 600,
+    puzzles: [
+      {
+        id: 'ir-1',
+        type: 'MULTIPLE_CHOICE',
+        title: 'Ransomware Response',
+        config: {
+          question: 'Your organization has been hit by ransomware. What is the FIRST step you should take?',
+          options: [
+            { id: 'a', text: 'Pay the ransom to recover files quickly' },
+            { id: 'b', text: 'Isolate affected systems from the network' },
+            { id: 'c', text: 'Delete all encrypted files' },
+            { id: 'd', text: 'Restore from backup immediately' },
+          ],
+          correctId: 'b',
+        },
+        hints: ['Containment prevents spread to other systems', 'Never pay ransoms - it encourages more attacks', 'Preserve evidence before restoration'],
+        basePoints: 100,
+      },
+    ],
+  },
+};
+
 export default function GameCanvas() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -86,9 +226,8 @@ export default function GameCanvas() {
   useEffect(() => {
     if (!id) return;
 
-    api.get(`/api/rooms/${id}`).then(res => {
-      const room = res.data;
-      const puzzles: RawPuzzle[] = room.puzzles || [];
+    const loadRoom = (room: { id: string; name: string; type: string; timeLimit: number; puzzles: RawPuzzle[] }) => {
+      const puzzles = room.puzzles || [];
       puzzlesRef.current = puzzles;
 
       game.startRoom({
@@ -99,14 +238,24 @@ export default function GameCanvas() {
         totalPuzzles: puzzles.length,
       });
 
-      // Start game progress on backend
-      api.post(`/api/rooms/${id}/start`).catch(() => {});
-
       // Show briefing/intro
       setTimeout(() => {
         game.setBriefing();
       }, 500);
-    }).catch(() => {});
+    };
+
+    api.get(`/api/rooms/${id}`).then(res => {
+      const room = res.data;
+      loadRoom({ id: room.id, name: room.name, type: room.type, timeLimit: room.timeLimit, puzzles: room.puzzles || [] });
+      // Start game progress on backend
+      api.post(`/api/rooms/${id}/start`).catch(() => {});
+    }).catch(() => {
+      // Use demo room data as fallback
+      const demoRoom = DEMO_ROOMS[id];
+      if (demoRoom) {
+        loadRoom({ id, name: demoRoom.name, type: demoRoom.type, timeLimit: demoRoom.timeLimit, puzzles: demoRoom.puzzles });
+      }
+    });
 
     return () => {
       stopAmbient();
@@ -149,17 +298,88 @@ export default function GameCanvas() {
     }, 500);
   };
 
+  // Local validation for demo puzzles
+  const validateDemoAnswer = (puzzle: RawPuzzle, answer: Record<string, unknown>): { correct: boolean; message: string } => {
+    const config = typeof puzzle.config === 'string' ? JSON.parse(puzzle.config) : puzzle.config;
+    const ans = answer.answer ?? answer;
+
+    switch (puzzle.type) {
+      case 'PASSWORD_STRENGTH': {
+        const pw = (ans as { password?: string })?.password || '';
+        const minLen = (config as { minLength?: number }).minLength || 12;
+        const checks = [
+          pw.length >= minLen,
+          /[A-Z]/.test(pw),
+          /[a-z]/.test(pw),
+          /[0-9]/.test(pw),
+          /[^A-Za-z0-9]/.test(pw),
+          !/^(password|123456|qwerty)/i.test(pw) && pw.length > 0,
+        ];
+        const correct = checks.every(Boolean);
+        return { correct, message: correct ? 'Great password! It meets all security requirements.' : 'Password does not meet all requirements.' };
+      }
+      case 'PHISHING_INBOX':
+      case 'PHISHING_CLASSIFICATION': {
+        const classifications = (ans as { classifications?: Record<string, string> })?.classifications || {};
+        const emails = (config as { emails?: { id: string; isPhishing: boolean }[] }).emails || [];
+        const allCorrect = emails.every(e => {
+          const userClass = classifications[e.id];
+          return (e.isPhishing && userClass === 'phishing') || (!e.isPhishing && userClass === 'legitimate');
+        });
+        return { correct: allCorrect, message: allCorrect ? 'Excellent! You correctly identified all emails.' : 'Some emails were misclassified. Look for suspicious sender domains and urgent language.' };
+      }
+      case 'MULTIPLE_CHOICE': {
+        const selectedIds = (ans as { selectedIds?: string[] })?.selectedIds || [];
+        const correctId = (config as { correctId?: string }).correctId;
+        const correct = selectedIds.length === 1 && selectedIds[0] === correctId;
+        return { correct, message: correct ? 'Correct answer!' : 'That\'s not quite right. Think about security best practices.' };
+      }
+      case 'DRAG_DROP':
+      case 'DRAG_DROP_CLASSIFICATION': {
+        const placements = (ans as { placements?: Record<string, string> })?.placements || {};
+        const categories = (config as { categories?: { id: string; correctItems: string[] }[] }).categories || [];
+        let allCorrect = true;
+        for (const cat of categories) {
+          for (const itemId of cat.correctItems) {
+            if (placements[itemId] !== cat.id) allCorrect = false;
+          }
+        }
+        return { correct: allCorrect, message: allCorrect ? 'Perfect classification!' : 'Some items are in the wrong category.' };
+      }
+      default:
+        return { correct: true, message: 'Answer accepted.' };
+    }
+  };
+
   const handleSubmit = async (answer: Record<string, unknown>) => {
     game.submitAnswer();
-    try {
-      const res = await api.post(`/api/puzzles/${game.currentPuzzle?.id}/submit`, {
-        roomId: id,
-        answer: answer.answer ?? answer,
-      });
 
-      const { result, score } = res.data;
-      const correct = result?.isCorrect ?? false;
-      const message = result?.feedback || (correct ? 'Correct!' : 'Incorrect, try again.');
+    // Check if this is a demo puzzle (ID starts with common demo prefixes)
+    const isDemo = id && DEMO_ROOMS[id] !== undefined;
+
+    try {
+      let correct: boolean;
+      let message: string;
+      let score = 100;
+
+      if (isDemo && game.currentPuzzle) {
+        // Local validation for demo puzzles
+        const currentRawPuzzle = puzzlesRef.current[game.currentPuzzleIndex];
+        const result = validateDemoAnswer(currentRawPuzzle, answer);
+        correct = result.correct;
+        message = result.message;
+        score = correct ? (currentRawPuzzle.basePoints || 100) : 0;
+      } else {
+        // API validation for real puzzles
+        const res = await api.post(`/api/puzzles/${game.currentPuzzle?.id}/submit`, {
+          roomId: id,
+          answer: answer.answer ?? answer,
+        });
+        const { result, score: apiScore } = res.data;
+        correct = result?.isCorrect ?? false;
+        message = result?.feedback || (correct ? 'Correct!' : 'Incorrect, try again.');
+        score = apiScore || 0;
+      }
 
       if (correct) {
         playSFX('correct');

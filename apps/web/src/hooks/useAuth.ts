@@ -1,6 +1,6 @@
 import { useSelector, useDispatch } from 'react-redux';
 import type { RootState, AppDispatch } from '@/store/store';
-import { login, register, logout } from '@/store/slices/authSlice';
+import { login, register, logout, loginAsGuest } from '@/store/slices/authSlice';
 
 export function useAuth() {
   const dispatch = useDispatch<AppDispatch>();
@@ -11,5 +11,6 @@ export function useAuth() {
     login: (credentials: { email: string; password: string }) => dispatch(login(credentials)),
     register: (data: { name: string; email: string; password: string }) => dispatch(register(data)),
     logout: () => dispatch(logout()),
+    loginAsGuest: () => dispatch(loginAsGuest()),
   };
 }

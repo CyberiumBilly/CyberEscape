@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Card, CardTitle, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { Lock, CheckCircle, Play, Flame, Star, Trophy } from 'lucide-react';
+import { Lock, CheckCircle, Play, Flame, Star, Trophy, Box } from 'lucide-react';
 import { api } from '@/lib/api';
 import { formatPoints, calculateLevel } from '@/lib/utils';
 import { motion } from 'framer-motion';
@@ -20,6 +20,15 @@ interface RoomStatus {
   score?: number;
 }
 
+const DEMO_ROOMS: RoomStatus[] = [
+  { id: 'password-auth', number: 1, name: 'Password Authentication', description: 'Learn secure password practices', type: 'SINGLE', status: 'NOT_STARTED' },
+  { id: 'phishing', number: 2, name: 'Phishing Detection', description: 'Identify malicious emails', type: 'SINGLE', status: 'NOT_STARTED' },
+  { id: 'network-security', number: 3, name: 'Network Security', description: 'Secure the network', type: 'SINGLE', status: 'NOT_STARTED' },
+  { id: 'data-protection', number: 4, name: 'Data Protection', description: 'Protect sensitive data', type: 'SINGLE', status: 'NOT_STARTED' },
+  { id: 'insider-threat', number: 5, name: 'Insider Threat', description: 'Detect insider threats', type: 'SINGLE', status: 'NOT_STARTED' },
+  { id: 'incident-response', number: 6, name: 'Incident Response', description: 'Respond to security incidents', type: 'SINGLE', status: 'NOT_STARTED' },
+];
+
 export default function DashboardPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -29,15 +38,21 @@ export default function DashboardPage() {
   useEffect(() => {
     api.get('/api/rooms').then(r => {
       const data = Array.isArray(r.data) ? r.data : [];
-      setRooms(data.map((room: any) => ({
-        id: room.id,
-        number: room.order,
-        name: room.name,
-        description: room.description,
-        type: room.type,
-        status: 'NOT_STARTED' as const,
-      })));
-    }).catch(() => {});
+      if (data.length > 0) {
+        setRooms(data.map((room: any) => ({
+          id: room.id,
+          number: room.order,
+          name: room.name,
+          description: room.description,
+          type: room.type,
+          status: 'NOT_STARTED' as const,
+        })));
+      } else {
+        setRooms(DEMO_ROOMS);
+      }
+    }).catch(() => {
+      setRooms(DEMO_ROOMS);
+    });
     api.get('/api/gamification/progress').then(r => {
       const s = r.data?.stats || {};
       setStats({ totalPoints: s.totalScore ?? 0, currentLevel: calculateLevel(s.totalScore ?? 0), currentStreak: s.currentStreak ?? 0, roomsCompleted: s.roomsCompleted ?? 0 });
@@ -102,9 +117,16 @@ export default function DashboardPage() {
                       <Link to={`/rooms/${room.id}/results`}><Button variant="ghost" size="sm">View Results</Button></Link>
                     </div>
                   ) : room.status !== 'LOCKED' ? (
-                    <Link to={room.type === 'TEAM' ? `/team/lobby/${room.id}` : `/rooms/${room.id}`}>
-                      <Button size="sm" className="w-full">{t('dashboard.startRoom')}</Button>
-                    </Link>
+                    <div className="flex gap-2">
+                      <Link to={room.type === 'TEAM' ? `/team/lobby/${room.id}` : `/rooms/${room.id}`} className="flex-1">
+                        <Button size="sm" className="w-full">{t('dashboard.startRoom')}</Button>
+                      </Link>
+                      <Link to={`/rooms/${room.id}/3d`}>
+                        <Button size="sm" variant="secondary" title="Play in 3D">
+                          <Box className="h-4 w-4" />
+                        </Button>
+                      </Link>
+                    </div>
                   ) : (
                     <p className="text-center text-sm text-cyber-muted">{t('dashboard.locked')}</p>
                   )}

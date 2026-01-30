@@ -7,6 +7,7 @@ import adminReducer from './slices/adminSlice';
 import chatReducer from './slices/chatSlice';
 import uiReducer from './slices/uiSlice';
 import settingsReducer from './slices/settingsSlice';
+import world3DReducer from './slices/world3DSlice';
 
 export const store = configureStore({
   reducer: {
@@ -18,6 +19,7 @@ export const store = configureStore({
     chat: chatReducer,
     ui: uiReducer,
     settings: settingsReducer,
+    world3D: world3DReducer,
   },
 });
 
