@@ -17,6 +17,7 @@ import { gamificationRoutes } from "./modules/gamification/controller.js";
 import { analyticsRoutes } from "./modules/analytics/controller.js";
 import { alertRoutes } from "./modules/alerts/controller.js";
 import { integrationRoutes } from "./modules/integrations/controller.js";
+import { eventRoutes } from "./modules/events/controller.js";
 
 export async function buildApp() {
   const app = Fastify({ logger: false });
@@ -39,6 +40,7 @@ export async function buildApp() {
   await app.register(analyticsRoutes);
   await app.register(alertRoutes);
   await app.register(integrationRoutes);
+  await app.register(eventRoutes);
 
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof AppError) {

@@ -15,6 +15,9 @@ export const config = {
     port: parseInt(process.env.REDIS_PORT || "6379", 10),
     password: process.env.REDIS_PASSWORD || undefined,
   },
+  mongo: {
+    url: process.env.MONGO_URL || "mongodb://cyber:cyber@localhost:27017/cyberescape?authSource=admin",
+  },
   cors: {
     origin: process.env.CORS_ORIGIN || "http://localhost:5173",
   },

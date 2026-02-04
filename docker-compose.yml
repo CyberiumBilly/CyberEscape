@@ -35,6 +35,18 @@ services:
       --min-port=10000
       --max-port=10100
 
+  mongodb:
+    image: mongo:7
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongodata:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: cyber
+      MONGO_INITDB_ROOT_PASSWORD: cyber
+      MONGO_INITDB_DATABASE: cyberescape
+
 volumes:
   pgdata:
   redisdata:
+  mongodata:

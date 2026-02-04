@@ -18,6 +18,7 @@ export const QUEUE_NAMES = {
   REPORTS: "reports",
   ALERTS: "alerts",
   NOTIFICATIONS: "notifications",
+  EVENT_INGESTION: "event-ingestion",
 } as const;
 
 /**
@@ -47,11 +48,20 @@ export const ALERT_JOB_TYPES = {
   SEND_ALERT: "send-alert",
 } as const;
 
+/**
+ * Job types for event ingestion queue.
+ */
+export const EVENT_INGESTION_JOB_TYPES = {
+  INGEST_EVENT: "ingest-event",
+  INGEST_BATCH: "ingest-batch",
+} as const;
+
 // Queue instances
 let resilienceQueue: Queue.Queue | null = null;
 let reportQueue: Queue.Queue | null = null;
 let alertQueue: Queue.Queue | null = null;
 let notificationQueue: Queue.Queue | null = null;
+let eventIngestionQueue: Queue.Queue | null = null;
 
 /**
  * Initialize all job queues.
@@ -107,6 +117,19 @@ export async function initializeQueues() {
         delay: 1000,
       },
       removeOnComplete: true,
+    },
+  });
+
+  eventIngestionQueue = new Queue(QUEUE_NAMES.EVENT_INGESTION, {
+    redis: redisConfig,
+    defaultJobOptions: {
+      attempts: 3,
+      backoff: {
+        type: "exponential",
+        delay: 1000,
+      },
+      removeOnComplete: 1000,
+      removeOnFail: 500,
     },
   });
 
@@ -193,6 +216,16 @@ export function getNotificationQueue(): Queue.Queue {
 }
 
 /**
+ * Get the event ingestion queue.
+ */
+export function getEventIngestionQueue(): Queue.Queue {
+  if (!eventIngestionQueue) {
+    throw new Error("Event ingestion queue not initialized. Call initializeQueues() first.");
+  }
+  return eventIngestionQueue;
+}
+
+/**
  * Add a job to calculate organization resilience score.
  */
 export async function scheduleOrgResilienceCalculation(
@@ -252,6 +285,7 @@ export async function shutdownQueues() {
   if (reportQueue) closePromises.push(reportQueue.close());
   if (alertQueue) closePromises.push(alertQueue.close());
   if (notificationQueue) closePromises.push(notificationQueue.close());
+  if (eventIngestionQueue) closePromises.push(eventIngestionQueue.close());
 
   await Promise.all(closePromises);
 
