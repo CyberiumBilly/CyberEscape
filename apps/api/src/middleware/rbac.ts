@@ -233,3 +233,243 @@ export async function checkPermission(
 export async function getPermissionsForRole(role: string): Promise<string[]> {
   return getRolePermissions(role);
 }
+
+/**
+ * Resource types for resource-level ACL.
+ */
+export const RESOURCE_TYPES = {
+  GROUP: "group",
+  ROOM: "room",
+  REPORT: "report",
+  CAMPAIGN: "campaign",
+} as const;
+
+/**
+ * Resource permission levels.
+ */
+export const RESOURCE_PERMISSIONS = {
+  READ: "read",
+  WRITE: "write",
+  MANAGE: "manage",
+} as const;
+
+/**
+ * Checks if a user has resource-level permission.
+ * Falls back to role hierarchy if no explicit permission exists.
+ */
+async function hasResourcePermission(
+  userId: string,
+  role: string,
+  resourceType: string,
+  resourceId: string,
+  permission: string
+): Promise<boolean> {
+  // SUPER_ADMIN has access to everything
+  if (role === "SUPER_ADMIN") {
+    return true;
+  }
+
+  // Check explicit resource permission
+  const resourcePerm = await prisma.resourcePermission.findFirst({
+    where: {
+      userId,
+      resourceType,
+      resourceId,
+      permission,
+    },
+  });
+
+  if (resourcePerm) {
+    return true;
+  }
+
+  // Check if user has "manage" permission (implies read/write)
+  if (permission !== RESOURCE_PERMISSIONS.MANAGE) {
+    const managePerm = await prisma.resourcePermission.findFirst({
+      where: {
+        userId,
+        resourceType,
+        resourceId,
+        permission: RESOURCE_PERMISSIONS.MANAGE,
+      },
+    });
+    if (managePerm) {
+      return true;
+    }
+  }
+
+  // Check if user has "write" permission (implies read)
+  if (permission === RESOURCE_PERMISSIONS.READ) {
+    const writePerm = await prisma.resourcePermission.findFirst({
+      where: {
+        userId,
+        resourceType,
+        resourceId,
+        permission: RESOURCE_PERMISSIONS.WRITE,
+      },
+    });
+    if (writePerm) {
+      return true;
+    }
+  }
+
+  // Fall back to role-based permission
+  // ORG_ADMIN has access to all resources in their org
+  if (role === "ORG_ADMIN") {
+    return true;
+  }
+
+  // MANAGER has read access to groups they manage
+  if (role === "MANAGER" && resourceType === RESOURCE_TYPES.GROUP && permission === RESOURCE_PERMISSIONS.READ) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Middleware factory for resource-level access control.
+ * Checks if user has permission on a specific resource.
+ *
+ * @param resourceType - Type of resource (group, room, report, campaign)
+ * @param permission - Required permission (read, write, manage)
+ * @param getResourceId - Optional function to extract resourceId from request (defaults to params.id)
+ *
+ * @example
+ * // Check read access to a group
+ * fastify.get('/groups/:id', {
+ *   preHandler: [authenticate, requireResourceAccess('group', 'read')]
+ * }, handler)
+ *
+ * @example
+ * // Check write access with custom resource ID extraction
+ * fastify.put('/reports/:reportId', {
+ *   preHandler: [authenticate, requireResourceAccess('report', 'write', (req) => req.params.reportId)]
+ * }, handler)
+ */
+export function requireResourceAccess(
+  resourceType: string,
+  permission: string,
+  getResourceId?: (request: FastifyRequest) => string
+) {
+  return async function (
+    request: FastifyRequest,
+    _reply: FastifyReply
+  ): Promise<void> {
+    const user = request.user;
+    if (!user) {
+      throw forbidden("No authenticated user");
+    }
+
+    const resourceId = getResourceId
+      ? getResourceId(request)
+      : (request.params as any).id;
+
+    if (!resourceId) {
+      throw forbidden("Resource ID not provided");
+    }
+
+    const hasAccess = await hasResourcePermission(
+      user.id,
+      user.role,
+      resourceType,
+      resourceId,
+      permission
+    );
+
+    if (!hasAccess) {
+      throw forbidden(`No ${permission} access to ${resourceType}:${resourceId}`);
+    }
+  };
+}
+
+/**
+ * Helper to check resource access in service code (not middleware).
+ */
+export async function checkResourceAccess(
+  userId: string,
+  role: string,
+  resourceType: string,
+  resourceId: string,
+  permission: string
+): Promise<boolean> {
+  return hasResourcePermission(userId, role, resourceType, resourceId, permission);
+}
+
+/**
+ * Grants a resource permission to a user.
+ */
+export async function grantResourcePermission(
+  userId: string,
+  resourceType: string,
+  resourceId: string,
+  permission: string,
+  grantedBy?: string
+): Promise<void> {
+  await prisma.resourcePermission.upsert({
+    where: {
+      userId_resourceType_resourceId_permission: {
+        userId,
+        resourceType,
+        resourceId,
+        permission,
+      },
+    },
+    create: {
+      userId,
+      resourceType,
+      resourceId,
+      permission,
+      grantedBy,
+    },
+    update: {
+      grantedBy,
+    },
+  });
+}
+
+/**
+ * Revokes a resource permission from a user.
+ */
+export async function revokeResourcePermission(
+  userId: string,
+  resourceType: string,
+  resourceId: string,
+  permission: string
+): Promise<void> {
+  await prisma.resourcePermission.deleteMany({
+    where: {
+      userId,
+      resourceType,
+      resourceId,
+      permission,
+    },
+  });
+}
+
+/**
+ * Gets all resource permissions for a user.
+ */
+export async function getUserResourcePermissions(userId: string) {
+  return prisma.resourcePermission.findMany({
+    where: { userId },
+    orderBy: [{ resourceType: "asc" }, { resourceId: "asc" }],
+  });
+}
+
+/**
+ * Gets all users with permission on a resource.
+ */
+export async function getResourcePermissionUsers(
+  resourceType: string,
+  resourceId: string
+) {
+  return prisma.resourcePermission.findMany({
+    where: { resourceType, resourceId },
+    include: {
+      user: {
+        select: { id: true, email: true, firstName: true, lastName: true },
+      },
+    },
+  });
+}

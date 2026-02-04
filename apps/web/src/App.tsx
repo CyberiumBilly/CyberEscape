@@ -23,6 +23,7 @@ const AnalyticsPage = lazy(() => import('./features/admin/AnalyticsPage'));
 const ReportsPage = lazy(() => import('./features/admin/ReportsPage'));
 const CampaignManagement = lazy(() => import('./features/admin/CampaignManagement'));
 const OrgSettings = lazy(() => import('./features/admin/OrgSettings'));
+const ResilienceDashboard = lazy(() => import('./features/admin/ResilienceDashboard'));
 const AdminLayout = lazy(() => import('./features/admin/AdminLayout'));
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
@@ -76,6 +77,7 @@ export default function App() {
                 <Route path="reports" element={<ReportsPage />} />
                 <Route path="campaigns" element={<CampaignManagement />} />
                 <Route path="settings" element={<OrgSettings />} />
+                <Route path="resilience" element={<ResilienceDashboard />} />
               </Route>
             </Route>
           </Route>

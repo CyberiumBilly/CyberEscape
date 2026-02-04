@@ -195,6 +195,7 @@ model User {
   // New relations for platform enhancement
   riskScore      UserRiskScore?
   createdCustomPuzzles CustomPuzzle[]
+  resourcePermissions ResourcePermission[]
 
   @@index([email])
   @@index([organizationId])
@@ -557,6 +558,22 @@ model Permission {
   rolePermissions RolePermission[]
 
   @@index([category])
+}
+
+// Resource-level ACL for fine-grained access control
+model ResourcePermission {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resourceType String   // "group", "room", "report", "campaign"
+  resourceId   String
+  permission   String   // "read", "write", "manage"
+  grantedBy    String?
+  createdAt    DateTime @default(now())
+
+  @@unique([userId, resourceType, resourceId, permission])
+  @@index([userId])
+  @@index([resourceType, resourceId])
 }
 
 model RolePermission {
