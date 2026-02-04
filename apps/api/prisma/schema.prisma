@@ -98,6 +98,39 @@ enum ReportType {
   USER
   ROOM
   COMPLIANCE
+  PERFORMANCE_SUMMARY
+  RISK_ASSESSMENT
+  EXECUTIVE_SUMMARY
+}
+
+// New enums for platform enhancement
+enum DifficultyLevel {
+  EASY
+  NORMAL
+  HARD
+  EXPERT
+}
+
+enum ContentType {
+  ROOM
+  PUZZLE
+  HINT
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum AlertType {
+  DEADLINE_APPROACHING
+  LOW_ENGAGEMENT
+  HIGH_RISK_USER
+  SCORE_DROP
+  COMPLETION_MILESTONE
+  COMPLIANCE_WARNING
 }
 
 model Organization {
@@ -120,6 +153,15 @@ model Organization {
   ssoConfigs   SSOConfig[]
   webhookConfigs WebhookConfig[]
   scormPackages  SCORMPackage[]
+
+  // New relations for platform enhancement
+  environment       OrganizationEnvironment?
+  contentOverrides  ContentOverride[]
+  featureFlags      OrganizationFeatureFlag[]
+  complianceSettings ComplianceSettings?
+  roomConfigurations RoomConfiguration[]
+  customPuzzles     CustomPuzzle[]
+  resilienceScores  OrganizationResilienceScore[]
 
   @@index([slug])
 }
@@ -150,6 +192,10 @@ model User {
   refreshTokens  RefreshToken[]
   auditLogs      AuditLog[]
 
+  // New relations for platform enhancement
+  riskScore      UserRiskScore?
+  createdCustomPuzzles CustomPuzzle[]
+
   @@index([email])
   @@index([organizationId])
   @@index([googleId])
@@ -164,6 +210,9 @@ model Group {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
   userGroups     UserGroup[]
+
+  // New relations for platform enhancement
+  resilienceScores GroupResilienceScore[]
 
   @@index([organizationId])
 }
@@ -194,6 +243,10 @@ model Room {
   updatedAt   DateTime @updatedAt
   puzzles     Puzzle[]
   gameProgress GameProgress[]
+
+  // New relations for platform enhancement
+  configurations RoomConfiguration[]
+  customPuzzles  CustomPuzzle[]
 
   @@index([slug])
   @@index([order])
@@ -487,4 +540,303 @@ model SCORMPackage {
   generatedAt    DateTime     @default(now())
 
   @@index([organizationId])
+}
+
+// ============================================
+// NEW MODELS FOR PLATFORM ENHANCEMENT
+// ============================================
+
+// Permission System
+model Permission {
+  id          String   @id @default(cuid())
+  name        String   @unique  // e.g., "users:read", "analytics:export"
+  description String
+  category    String   // e.g., "users", "analytics", "organizations"
+  createdAt   DateTime @default(now())
+
+  rolePermissions RolePermission[]
+
+  @@index([category])
+}
+
+model RolePermission {
+  id           String     @id @default(cuid())
+  role         UserRole
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+
+  @@unique([role, permissionId])
+  @@index([role])
+}
+
+// Organization Environment & Customization
+model OrganizationEnvironment {
+  id             String       @id @default(cuid())
+  organizationId String       @unique
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  // Theme settings
+  themePrimaryColor   String  @default("#6366f1")
+  themeSecondaryColor String  @default("#8b5cf6")
+  themeMode           String  @default("light") // light, dark, auto
+  customCss           String?
+
+  // Game settings
+  defaultDifficulty   DifficultyLevel @default(NORMAL)
+  allowHints          Boolean         @default(true)
+  maxHintsPerPuzzle   Int             @default(3)
+  showLeaderboard     Boolean         @default(true)
+  allowRetries        Boolean         @default(true)
+  maxRetriesPerPuzzle Int             @default(3)
+  timeLimitMultiplier Float           @default(1.0)
+
+  // Gamification toggles
+  enableBadges       Boolean @default(true)
+  enableStreaks      Boolean @default(true)
+  enableXP           Boolean @default(true)
+  enableLeaderboards Boolean @default(true)
+  enableTeamMode     Boolean @default(true)
+
+  // Communication settings
+  welcomeMessage   String?
+  completionMessage String?
+  customTerminology Json    @default("{}") // e.g., {"room": "module", "puzzle": "challenge"}
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ContentOverride {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  contentType    ContentType
+  contentId      String       // ID of Room, Puzzle, or Hint
+  field          String       // Which field to override (e.g., "title", "description")
+  originalValue  String?      // Original value for reference
+  overrideValue  String       // The overridden value
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([organizationId, contentType, contentId, field])
+  @@index([organizationId, contentType])
+}
+
+model OrganizationFeatureFlag {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  featureKey     String       // e.g., "team_mode", "advanced_analytics", "custom_puzzles"
+  enabled        Boolean      @default(false)
+  config         Json         @default("{}") // Feature-specific configuration
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([organizationId, featureKey])
+  @@index([organizationId])
+}
+
+model ComplianceSettings {
+  id             String       @id @default(cuid())
+  organizationId String       @unique
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  // Training requirements
+  trainingDeadlineDays  Int      @default(30)   // Days from assignment to complete
+  requiredRooms         Json     @default("[]") // Array of RoomType values that must be completed
+  minimumPassScore      Int      @default(70)   // Minimum score to pass (percentage)
+  requireAllPuzzles     Boolean  @default(true) // Must complete all puzzles in required rooms
+
+  // Recertification
+  recertificationEnabled  Boolean @default(false)
+  recertificationMonths   Int     @default(12) // Months before recertification required
+
+  // Certificates
+  certificatesEnabled     Boolean @default(true)
+  certificateTemplate     String? // Custom template ID or URL
+  certificateSignatory    String? // Name to appear on certificate
+  certificateSignatoryTitle String? // Title of signatory
+
+  // Reminders
+  reminderDays            Json    @default("[7, 3, 1]") // Days before deadline to send reminders
+  escalationEnabled       Boolean @default(false)
+  escalationDays          Int     @default(7)  // Days after deadline to escalate
+
+  // Compliance reporting
+  complianceOfficerEmail  String?
+  weeklyReportEnabled     Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model RoomConfiguration {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  roomId         String
+  room           Room         @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  // Enable/disable
+  enabled         Boolean         @default(true)
+
+  // Overrides
+  customTimeLimit Int?            // Override default time limit (seconds)
+  customDifficulty DifficultyLevel?
+  customOrder     Int?            // Override display order for this org
+
+  // Unlock requirements
+  unlockAfterRooms Json           @default("[]") // Room IDs that must be completed first
+  unlockDate       DateTime?       // Specific date to unlock
+
+  // Settings
+  customSettings   Json           @default("{}") // Room-specific settings
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, roomId])
+  @@index([organizationId])
+}
+
+model CustomPuzzle {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  roomId         String
+  room           Room         @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  createdById    String
+  createdBy      User         @relation(fields: [createdById], references: [id])
+
+  title          String
+  description    String
+  type           PuzzleType
+  order          Int          @default(0)
+  basePoints     Int          @default(100)
+  timeLimit      Int          @default(300)
+  config         Json         @default("{}")
+  hints          Json         @default("[]")
+  answer         Json
+  explanation    String?
+  isActive       Boolean      @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId, roomId])
+}
+
+// Resilience Scoring System
+model OrganizationResilienceScore {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  // Overall score (0-100)
+  overallScore       Float
+
+  // Component scores (each 0-100)
+  completionScore    Float    // Based on training completion rate
+  performanceScore   Float    // Based on average puzzle performance
+
+  // Detailed metrics
+  totalUsers         Int
+  activeUsers        Int
+  completedUsers     Int
+  averageAccuracy    Float
+  averageTimeSpent   Int      // seconds
+
+  // Risk breakdown
+  lowRiskCount       Int      @default(0)
+  mediumRiskCount    Int      @default(0)
+  highRiskCount      Int      @default(0)
+  criticalRiskCount  Int      @default(0)
+
+  // Period tracking
+  periodStart        DateTime
+  periodEnd          DateTime
+  calculatedAt       DateTime @default(now())
+
+  @@index([organizationId, calculatedAt])
+  @@index([periodEnd])
+}
+
+model GroupResilienceScore {
+  id        String   @id @default(cuid())
+  groupId   String
+  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  // Scores
+  overallScore       Float
+  completionScore    Float
+  performanceScore   Float
+
+  // Metrics
+  totalUsers         Int
+  completedUsers     Int
+  averageAccuracy    Float
+
+  // Risk breakdown
+  lowRiskCount       Int      @default(0)
+  mediumRiskCount    Int      @default(0)
+  highRiskCount      Int      @default(0)
+  criticalRiskCount  Int      @default(0)
+
+  // Period tracking
+  periodStart        DateTime
+  periodEnd          DateTime
+  calculatedAt       DateTime @default(now())
+
+  @@index([groupId, calculatedAt])
+}
+
+model UserRiskScore {
+  id        String    @id @default(cuid())
+  userId    String    @unique
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  riskLevel RiskLevel @default(LOW)
+  riskScore Int       @default(0)  // 0-100, higher = more risk
+
+  // Risk factors (stored as JSON for flexibility)
+  // Factors: incomplete_training (+30), low_phishing (+25), inactive (+20), low_performance (+15), multiple_failures (+10)
+  riskFactors Json    @default("[]")
+
+  // Breakdown scores
+  trainingCompletion  Float  @default(0)  // 0-100
+  phishingScore       Float  @default(0)  // 0-100
+  engagementScore     Float  @default(0)  // 0-100
+  performanceScore    Float  @default(0)  // 0-100
+
+  // Activity tracking
+  lastActivityAt      DateTime?
+  daysSinceActivity   Int    @default(0)
+
+  calculatedAt DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([riskLevel])
+  @@index([calculatedAt])
+}
+
+// Scheduled Reports
+model ScheduledReport {
+  id             String       @id @default(cuid())
+  organizationId String
+  title          String
+  reportType     ReportType
+  format         String       @default("pdf")  // pdf, csv, json
+  schedule       String       // cron expression
+  recipients     Json         @default("[]")   // Array of email addresses
+  filters        Json         @default("{}")   // Report filters
+  lastRunAt      DateTime?
+  nextRunAt      DateTime?
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([organizationId])
+  @@index([nextRunAt])
 }
